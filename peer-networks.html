@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloud Neighbor Networks</title>
+<style>
+:root {
+  --bg: #ffffff; --fg: #1d2330; --muted: #5d6677; --line: #dfe3ea; --panel: #f5f7fa;
+  --accent: #2f6fdf; --chip: #e8eefb; --chip-fg: #1d3f86; --warn: #8a5a00; --warn-bg: #fff6e0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12151b; --fg: #e3e7ee; --muted: #9aa4b5; --line: #2a303b; --panel: #1a1f27;
+    --accent: #7aa7ff; --chip: #223152; --chip-fg: #c9d9ff; --warn: #f0c36b; --warn-bg: #2d2615;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12151b; --fg: #e3e7ee; --muted: #9aa4b5; --line: #2a303b; --panel: #1a1f27;
+  --accent: #7aa7ff; --chip: #223152; --chip-fg: #c9d9ff; --warn: #f0c36b; --warn-bg: #2d2615;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+.wrap { max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; }
+.pagehead { max-width: none; margin: 0 auto 20px; text-align: center; }
+.pagehead h1 { margin: 0 0 8px; font-size: 26px; }
+.pagehead p { margin: 0 auto 10px; color: var(--muted); }
+.note { max-width: none; background: var(--warn-bg); color: var(--warn); border-radius: 8px;
+  padding: 10px 14px; margin: 0 0 16px; font-size: 14px; }
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 14px; }
+.tabs button { border: 1px solid var(--line); background: var(--panel); color: var(--fg);
+  padding: 8px 14px; border-radius: 999px; cursor: pointer; font: inherit; }
+.tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tabs button:disabled { opacity: .5; cursor: not-allowed; }
+.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin: 0 0 12px; }
+.controls label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.controls input, .controls select { font: inherit; color: var(--fg); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.controls .check { flex-direction: row; align-items: center; gap: 8px; color: var(--fg); }
+.meta { display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  flex-wrap: wrap; margin: 0 0 8px; color: var(--muted); font-size: 14px; }
+.meta button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--fg);
+  border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { position: sticky; top: 0; background: var(--panel); cursor: pointer; white-space: nowrap; user-select: none; }
+th[aria-sort="ascending"]::after { content: " ▲"; }
+th[aria-sort="descending"]::after { content: " ▼"; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { background: var(--chip); color: var(--chip-fg); border-radius: 4px; padding: 1px 6px; font-size: 12px; white-space: nowrap; }
+.chip.ixp { outline: 1px solid var(--accent); }
+details summary { cursor: pointer; color: var(--accent); }
+.pager { display: flex; gap: 8px; justify-content: center; align-items: center; margin: 12px 0 0; color: var(--muted); }
+.pager button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--fg);
+  border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+.section { margin: 28px 0 0; }
+.section h2 { font-size: 18px; margin: 0 0 8px; }
+.section p, .section li { max-width: none; color: var(--fg); }
+a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="pagehead">
+    <h1>Cloud Neighbor Networks, October 2026</h1>
+    <p>Every network observed as the first hop outside each cloud provider, with the regions whose traceroutes saw it.
+       Search by ASN or name, filter by region, address family or IXP hand-off, and download what you select.</p>
+    <p>Traceroutes from every eligible region of each provider toward 12.2M IPv4 and 256k IPv6 routed prefixes, 12–13 October 2026.
+       Method, maps and caveats: <a href="https://burdantes.github.io/projects/cloud-peering-maps/">the project page</a>.</p>
+  </header>
+
+  <div class="note" id="note"></div>
+
+  <div class="tabs" role="tablist" id="tabs"></div>
+
+  <div class="controls">
+    <label>Search ASN or name<input id="q" type="search" placeholder="e.g. 3356 or Lumen" autocomplete="off"></label>
+    <label>Seen from region<select id="region"><option value="">Any region</option></select></label>
+    <label>Address family<select id="family">
+      <option value="any">IPv4 or IPv6</option><option value="v4">IPv4</option>
+      <option value="v6">IPv6</option><option value="both">Both</option></select></label>
+    <label>Seen from at least<select id="minregions"></select></label>
+    <label>Also a neighbor of<select id="shared"><option value="">No filter</option>
+      <option value="any">Any other provider</option><option value="none">No other provider</option></select></label>
+    <label class="check"><input id="ixp" type="checkbox"> Reached across an IXP</label>
+  </div>
+
+  <div class="meta">
+    <span id="count">Loading…</span>
+    <button id="csv" type="button">Download CSV</button>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr>
+        <th data-key="asn" aria-sort="none">ASN</th>
+        <th data-key="name" aria-sort="none">Network</th>
+        <th data-key="n4" aria-sort="descending">IPv4 regions</th>
+        <th data-key="n6" aria-sort="none">IPv6 regions</th>
+        <th data-key="nixp" aria-sort="none">Via IXP</th>
+        <th data-key="ifaces" aria-sort="none">Interfaces</th>
+        <th data-key="nalso" aria-sort="none">Also a neighbor of</th>
+        <th>Regions</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <div class="pager"><button id="prev" type="button">Previous</button><span id="page"></span><button id="next" type="button">Next</button></div>
+
+  <section class="section">
+    <h2>How to read this table</h2>
+    <ul>
+      <li><strong>Neighbor network</strong> means the first network outside the provider on a traceroute path. It can be a peer, a transit provider or a customer; traceroute cannot tell which relationship it is.</li>
+      <li><strong>IPv4 / IPv6 regions</strong> count the provider regions from which the network was seen as a neighbor in that address family. Region chips outlined in blue are regions where at least one hand-off crossed a listed IXP port.</li>
+      <li><strong>Regions are where the traceroutes started, not where the interconnection is.</strong> A provider's backbone carries traffic from every region to the hand-off nearest the destination, so a network seen from all regions is often one interconnection reached from everywhere. For example, from both Frankfurt and Hong Kong, AWS reaches MIT (AS3) at the same address, 18.4.212.1.</li>
+      <li><strong>Also a neighbor of</strong> lists the other providers whose traceroutes in the same campaign saw this network as a neighbor, in either address family and from any region. It says the network connects to both providers, not that it connects to them in the same place.</li>
+      <li><strong>Interfaces</strong> counts distinct neighbor-side addresses observed across all regions. A low count next to many regions is the signature of that single, shared hand-off.</li>
+      <li>An IXP port resolves to the member network behind it, before any prefix match. IXP membership comes from EuroIX, PCH and PeeringDB, captured on 13 October 2026.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+"use strict";
+const PROVIDERS = [
+  { key: "gcp", label: "Google Cloud", file: "peer-networks/gcp-2026-10.json" },
+  { key: "aws", label: "AWS", file: "peer-networks/aws-2026-10.json" },
+  { key: "azure", label: "Azure", file: "peer-networks/azure-2026-10.json" },
+];
+const NOTES = {
+  gcp: "Probed at 5,000 packets per second. Google rate-limits ICMP replies at that rate, so some neighbors are missed and a few may be misattributed; per-region counts are about 6% (IPv4) and 21% (IPv6) lower than the September 1,000 pps campaign. IPv4 uses Google's Standard tier, IPv6 the Premium tier.",
+  aws: "Probed at 5,000 packets per second. Neighbors reached across an IXP are about 60% fewer per region than in August 2026 while all other neighbors are unchanged; whether AWS changed how it routes or its edge routers stopped answering traceroute is not yet established.",
+  azure: "IPv4 only: the IPv6 probes in this campaign failed to leave the virtual machines in 38 of 39 regions, so no Azure IPv6 neighbors are listed. IPv4 requested Azure's Internet (hot-potato) routing preference in every region, but only 28 regions behaved that way (21 to 344 neighbors each, mostly transit near the region). Eleven regions in India, the Middle East, Korea, South Africa, Australia and Arizona (westus3) saw 2,700 to 3,900 neighbors each at IXPs worldwide, as Microsoft's backbone (cold potato) would; why is not yet established.",
+};
+const PAGE = 100;
+const LABELS = Object.fromEntries(PROVIDERS.map((p) => [p.key, p.label]));
+const state = { provider: null, data: {}, sortKey: "n4", sortDir: -1, page: 0, filtered: [] };
+const $ = (id) => document.getElementById(id);
+
+function rowsOf(d) {
+  // columns: asn, name, regions_v4, regions_v6, via_ixp_regions, ixps, interfaces
+  // columns: asn, name, regions_v4, regions_v6, via_ixp_regions, ixps, interfaces, also
+  return d.rows.map(([asn, name, r4, r6, rx, ixps, ifaces, also = []]) => ({
+    asn, name, r4, r6, rx: new Set(rx), ixps, ifaces, also,
+    n4: r4.length, n6: r6.length, nixp: rx.length, nalso: also.length,
+    search: (asn + " " + name).toLowerCase(),
+  }));
+}
+
+async function load(key) {
+  if (state.data[key]) return state.data[key];
+  const p = PROVIDERS.find((x) => x.key === key);
+  const res = await fetch(p.file);
+  if (!res.ok) throw new Error(`${p.file}: HTTP ${res.status}`);
+  const d = await res.json();
+  state.data[key] = { meta: d, rows: rowsOf(d) };
+  return state.data[key];
+}
+
+function setOptions(d) {
+  const sel = $("region");
+  sel.length = 1;
+  d.meta.regions.forEach((r, i) => sel.add(new Option(r, String(i))));
+  const sh = $("shared"), keep = sh.value;
+  sh.length = 3;
+  (d.meta.shared_with_providers || []).forEach((k) => sh.add(new Option(LABELS[k] || k, k)));
+  sh.value = [...sh.options].some((o) => o.value === keep) ? keep : "";
+  const n = d.meta.regions.length, mr = $("minregions");
+  mr.length = 0;
+  for (let k = 1; k <= n; k++) mr.add(new Option(k === 1 ? "1 region" : `${k} regions`, String(k)));
+}
+
+function apply() {
+  const d = state.data[state.provider];
+  if (!d) return;
+  const q = $("q").value.trim().toLowerCase();
+  const region = $("region").value === "" ? null : Number($("region").value);
+  const fam = $("family").value, minr = Number($("minregions").value || 1), ixp = $("ixp").checked;
+  const shared = $("shared").value;
+  state.filtered = d.rows.filter((r) => {
+    if (q && !r.search.includes(q)) return false;
+    const in4 = region === null ? r.n4 > 0 : r.r4.includes(region);
+    const in6 = region === null ? r.n6 > 0 : r.r6.includes(region);
+    if (fam === "v4" && !in4) return false;
+    if (fam === "v6" && !in6) return false;
+    if (fam === "both" && !(in4 && in6)) return false;
+    if (fam === "any" && !(in4 || in6)) return false;
+    if (ixp && (region === null ? r.nixp === 0 : !r.rx.has(region))) return false;
+    if (shared === "any" && r.nalso === 0) return false;
+    if (shared === "none" && r.nalso > 0) return false;
+    if (shared && shared !== "any" && shared !== "none" && !r.also.includes(shared)) return false;
+    const seen = new Set([...(fam !== "v6" ? r.r4 : []), ...(fam !== "v4" ? r.r6 : [])]);
+    return seen.size >= minr;
+  });
+  const k = state.sortKey, dir = state.sortDir;
+  state.filtered.sort((a, b) => (a[k] < b[k] ? -dir : a[k] > b[k] ? dir : a.asn - b.asn));
+  state.page = Math.min(state.page, Math.max(0, Math.ceil(state.filtered.length / PAGE) - 1));
+  render();
+}
+
+function chips(r, regions) {
+  const all = [...new Set([...r.r4, ...r.r6])].sort((a, b) => regions[a].localeCompare(regions[b]));
+  const html = all.map((i) => {
+    const fams = (r.r4.includes(i) ? "4" : "") + (r.r6.includes(i) ? "6" : "");
+    const t = `${regions[i]} (IPv${fams.split("").join("/IPv")}${r.rx.has(i) ? ", via IXP" : ""})`;
+    return `<span class="chip${r.rx.has(i) ? " ixp" : ""}" title="${t}">${regions[i]}</span>`;
+  }).join("");
+  if (all.length <= 6) return `<div class="chips">${html}</div>`;
+  return `<details><summary>${all.length} regions</summary><div class="chips">${html}</div></details>`;
+}
+
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+function render() {
+  const d = state.data[state.provider], regions = d.meta.regions;
+  const start = state.page * PAGE, slice = state.filtered.slice(start, start + PAGE);
+  $("rows").innerHTML = slice.map((r) => `<tr>
+    <td class="num"><a href="https://bgp.tools/as/${r.asn}" rel="noopener">AS${r.asn}</a></td>
+    <td>${esc(r.name || "")}${r.ixps.length ? `<div class="chips" style="margin-top:4px">${r.ixps.slice(0, 4).map((x) => `<span class="chip" title="IXP">${esc(x.replace(/_/g, " "))}</span>`).join("")}${r.ixps.length > 4 ? `<span class="chip">+${r.ixps.length - 4} IXPs</span>` : ""}</div>` : ""}</td>
+    <td class="num">${r.n4}</td><td class="num">${r.n6}</td><td class="num">${r.nixp}</td><td class="num">${r.ifaces}</td>
+    <td>${r.also.length ? `<div class="chips">${r.also.map((k) => `<span class="chip">${esc(LABELS[k] || k)}</span>`).join("")}</div>` : `<span style="color:var(--muted)">None</span>`}</td>
+    <td>${chips(r, regions)}</td></tr>`).join("");
+  const total = d.rows.length, pages = Math.max(1, Math.ceil(state.filtered.length / PAGE));
+  $("count").textContent = `${state.filtered.length.toLocaleString()} of ${total.toLocaleString()} neighbor networks · ${regions.length} regions`;
+  $("page").textContent = `Page ${state.page + 1} of ${pages}`;
+  $("prev").disabled = state.page === 0; $("next").disabled = state.page >= pages - 1;
+  document.querySelectorAll("th[data-key]").forEach((th) =>
+    th.setAttribute("aria-sort", th.dataset.key === state.sortKey ? (state.sortDir > 0 ? "ascending" : "descending") : "none"));
+}
+
+function csv() {
+  const d = state.data[state.provider], R = d.meta.regions;
+  const q = (s) => `"${String(s).replace(/"/g, '""')}"`;
+  const lines = ["asn,name,ipv4_regions,ipv6_regions,via_ixp_regions,ixps,interfaces,also_neighbor_of"];
+  for (const r of state.filtered) lines.push([r.asn, q(r.name || ""), q(r.r4.map((i) => R[i]).join(" ")),
+    q(r.r6.map((i) => R[i]).join(" ")), q([...r.rx].map((i) => R[i]).join(" ")), q(r.ixps.join(" ")), r.ifaces, q(r.also.map((k) => LABELS[k] || k).join(" "))].join(","));
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([lines.join("\n") + "\n"], { type: "text/csv" }));
+  a.download = `${state.provider}-neighbor-networks-2026-10.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+async function select(key) {
+  state.provider = key; state.page = 0;
+  document.querySelectorAll("#tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.key === key)));
+  $("note").textContent = NOTES[key] || "";
+  $("count").textContent = "Loading…"; $("rows").innerHTML = "";
+  try { const d = await load(key); setOptions(d); apply(); }
+  catch (err) { $("count").textContent = `Could not load the ${key} table (${err.message}).`; }
+  try { history.replaceState(null, "", `#${key}`); } catch (e) {}
+}
+
+PROVIDERS.forEach((p) => {
+  const b = document.createElement("button");
+  b.type = "button"; b.role = "tab"; b.dataset.key = p.key; b.textContent = p.label;
+  b.addEventListener("click", () => select(p.key));
+  $("tabs").appendChild(b);
+});
+["q", "region", "family", "minregions", "ixp", "shared"].forEach((id) =>
+  $(id).addEventListener(id === "q" ? "input" : "change", () => { state.page = 0; apply(); }));
+document.querySelectorAll("th[data-key]").forEach((th) => th.addEventListener("click", () => {
+  const k = th.dataset.key;
+  state.sortDir = state.sortKey === k ? -state.sortDir : (k === "name" || k === "asn" ? 1 : -1);
+  state.sortKey = k; apply();
+}));
+$("prev").addEventListener("click", () => { state.page--; render(); });
+$("next").addEventListener("click", () => { state.page++; render(); });
+$("csv").addEventListener("click", csv);
+const initial = (location.hash || "").slice(1);
+select(PROVIDERS.some((p) => p.key === initial) ? initial : "gcp");
+</script>
+</body>
+</html>
