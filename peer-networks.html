@@ -84,6 +84,10 @@ a { color: var(--accent); }
       <option value="any">IPv4 or IPv6</option><option value="v4">IPv4</option>
       <option value="v6">IPv6</option><option value="both">Both</option></select></label>
     <label>Seen from at least<select id="minregions"></select></label>
+    <label>Seen at least<select id="minobs">
+      <option value="1">1 observation</option><option value="2">2 observations</option>
+      <option value="3">3 observations</option><option value="5">5 observations</option>
+      <option value="10">10 observations</option><option value="100">100 observations</option></select></label>
     <label>Also a neighbor of<select id="shared"><option value="">No filter</option>
       <option value="any">Any other provider</option><option value="none">No other provider</option></select></label>
     <label class="check"><input id="ixp" type="checkbox"> Reached across an IXP</label>
@@ -103,6 +107,7 @@ a { color: var(--accent); }
         <th data-key="n6" aria-sort="none">IPv6 regions</th>
         <th data-key="nixp" aria-sort="none">Via IXP</th>
         <th data-key="ifaces" aria-sort="none">Interfaces</th>
+        <th data-key="obs" aria-sort="none">Observations</th>
         <th data-key="nalso" aria-sort="none">Also a neighbor of</th>
         <th>Regions</th>
       </tr></thead>
@@ -118,6 +123,7 @@ a { color: var(--accent); }
       <li><strong>IPv4 / IPv6 regions</strong> count the provider regions from which the network was seen as a neighbor in that address family. Region chips outlined in blue are regions where at least one hand-off crossed a listed IXP port.</li>
       <li><strong>Regions are where the traceroutes started, not where the interconnection is.</strong> A provider's backbone carries traffic from every region to the hand-off nearest the destination, so a network seen from all regions is often one interconnection reached from everywhere. For example, from both Frankfurt and Hong Kong, AWS reaches MIT (AS3) at the same address, 18.4.212.1.</li>
       <li><strong>Also a neighbor of</strong> lists the other providers whose traceroutes in the same campaign saw this network as a neighbor, in either address family and from any region. It says the network connects to both providers, not that it connects to them in the same place.</li>
+      <li><strong>Observations</strong> counts how many times a traceroute crossed from the provider into this network, summed over all regions. A neighbor seen once deserves the least trust: a router that does not answer can make the next network look adjacent. For example, Azure's Dubai region appears to hand off directly to Columbia University (AS14) in a single trace; four other traces to the same Columbia router show NYSERNet in between. Raise <em>Seen at least</em> to hide such cases.</li>
       <li><strong>Interfaces</strong> counts distinct neighbor-side addresses observed across all regions. A low count next to many regions is the signature of that single, shared hand-off.</li>
       <li>An IXP port resolves to the member network behind it, before any prefix match. IXP membership comes from EuroIX, PCH and PeeringDB, captured on 13 October 2026.</li>
     </ul>
@@ -143,9 +149,9 @@ const $ = (id) => document.getElementById(id);
 
 function rowsOf(d) {
   // columns: asn, name, regions_v4, regions_v6, via_ixp_regions, ixps, interfaces
-  // columns: asn, name, regions_v4, regions_v6, via_ixp_regions, ixps, interfaces, also
-  return d.rows.map(([asn, name, r4, r6, rx, ixps, ifaces, also = []]) => ({
-    asn, name, r4, r6, rx: new Set(rx), ixps, ifaces, also,
+  // columns: asn, name, regions_v4, regions_v6, via_ixp_regions, ixps, interfaces, observations, also
+  return d.rows.map(([asn, name, r4, r6, rx, ixps, ifaces, obs, also = []]) => ({
+    asn, name, r4, r6, rx: new Set(rx), ixps, ifaces, obs, also,
     n4: r4.length, n6: r6.length, nixp: rx.length, nalso: also.length,
     search: (asn + " " + name).toLowerCase(),
   }));
@@ -180,7 +186,7 @@ function apply() {
   const q = $("q").value.trim().toLowerCase();
   const region = $("region").value === "" ? null : Number($("region").value);
   const fam = $("family").value, minr = Number($("minregions").value || 1), ixp = $("ixp").checked;
-  const shared = $("shared").value;
+  const shared = $("shared").value, minobs = Number($("minobs").value || 1);
   state.filtered = d.rows.filter((r) => {
     if (q && !r.search.includes(q)) return false;
     const in4 = region === null ? r.n4 > 0 : r.r4.includes(region);
@@ -190,6 +196,7 @@ function apply() {
     if (fam === "both" && !(in4 && in6)) return false;
     if (fam === "any" && !(in4 || in6)) return false;
     if (ixp && (region === null ? r.nixp === 0 : !r.rx.has(region))) return false;
+    if (r.obs < minobs) return false;
     if (shared === "any" && r.nalso === 0) return false;
     if (shared === "none" && r.nalso > 0) return false;
     if (shared && shared !== "any" && shared !== "none" && !r.also.includes(shared)) return false;
@@ -221,7 +228,7 @@ function render() {
   $("rows").innerHTML = slice.map((r) => `<tr>
     <td class="num"><a href="https://bgp.tools/as/${r.asn}" rel="noopener">AS${r.asn}</a></td>
     <td>${esc(r.name || "")}${r.ixps.length ? `<div class="chips" style="margin-top:4px">${r.ixps.slice(0, 4).map((x) => `<span class="chip" title="IXP">${esc(x.replace(/_/g, " "))}</span>`).join("")}${r.ixps.length > 4 ? `<span class="chip">+${r.ixps.length - 4} IXPs</span>` : ""}</div>` : ""}</td>
-    <td class="num">${r.n4}</td><td class="num">${r.n6}</td><td class="num">${r.nixp}</td><td class="num">${r.ifaces}</td>
+    <td class="num">${r.n4}</td><td class="num">${r.n6}</td><td class="num">${r.nixp}</td><td class="num">${r.ifaces}</td><td class="num">${r.obs.toLocaleString()}</td>
     <td>${r.also.length ? `<div class="chips">${r.also.map((k) => `<span class="chip">${esc(LABELS[k] || k)}</span>`).join("")}</div>` : `<span style="color:var(--muted)">None</span>`}</td>
     <td>${chips(r, regions)}</td></tr>`).join("");
   const total = d.rows.length, pages = Math.max(1, Math.ceil(state.filtered.length / PAGE));
@@ -235,9 +242,9 @@ function render() {
 function csv() {
   const d = state.data[state.provider], R = d.meta.regions;
   const q = (s) => `"${String(s).replace(/"/g, '""')}"`;
-  const lines = ["asn,name,ipv4_regions,ipv6_regions,via_ixp_regions,ixps,interfaces,also_neighbor_of"];
+  const lines = ["asn,name,ipv4_regions,ipv6_regions,via_ixp_regions,ixps,interfaces,observations,also_neighbor_of"];
   for (const r of state.filtered) lines.push([r.asn, q(r.name || ""), q(r.r4.map((i) => R[i]).join(" ")),
-    q(r.r6.map((i) => R[i]).join(" ")), q([...r.rx].map((i) => R[i]).join(" ")), q(r.ixps.join(" ")), r.ifaces, q(r.also.map((k) => LABELS[k] || k).join(" "))].join(","));
+    q(r.r6.map((i) => R[i]).join(" ")), q([...r.rx].map((i) => R[i]).join(" ")), q(r.ixps.join(" ")), r.ifaces, r.obs, q(r.also.map((k) => LABELS[k] || k).join(" "))].join(","));
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([lines.join("\n") + "\n"], { type: "text/csv" }));
   a.download = `${state.provider}-neighbor-networks-2026-10.csv`;
@@ -260,7 +267,7 @@ PROVIDERS.forEach((p) => {
   b.addEventListener("click", () => select(p.key));
   $("tabs").appendChild(b);
 });
-["q", "region", "family", "minregions", "ixp", "shared"].forEach((id) =>
+["q", "region", "family", "minregions", "minobs", "ixp", "shared"].forEach((id) =>
   $(id).addEventListener(id === "q" ? "input" : "change", () => { state.page = 0; apply(); }));
 document.querySelectorAll("th[data-key]").forEach((th) => th.addEventListener("click", () => {
   const k = th.dataset.key;
