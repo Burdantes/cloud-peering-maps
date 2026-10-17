@@ -7,11 +7,11 @@ Described at <https://burdantes.github.io/projects/cloud-peering-maps/>.
 | Map | Provider | Campaign | Family | Regions | Neighbor ASNs | Cities | IXPs |
 |---|---|---|---|---|---|---|---|
 | [`gcp-2026-10-ipv4-ipv6.html`](https://burdantes.github.io/cloud-peering-maps/gcp-2026-10-ipv4-ipv6.html) | Google Cloud | `monthly/20261012-5k/gcp` | IPv4 + IPv6 | 42 | 6,679 | 2,791 | 230 |
-| [`aws-2026-10-ipv4-ipv6.html`](https://burdantes.github.io/cloud-peering-maps/aws-2026-10-ipv4-ipv6.html) | AWS | `monthly/20261012-5k/aws` | IPv4 + IPv6 | 27 | 2,664 | 3,460 | 86 |
+| [`aws-2026-10-ipv4-ipv6.html`](https://burdantes.github.io/cloud-peering-maps/aws-2026-10-ipv4-ipv6.html) | AWS | `monthly/20261012-5k/aws` (re-mapped 2026-10-17) | IPv4 + IPv6 | 27 | 8,176 | 7,311 | 222 |
 | [`azure-2026-10-ipv4.html`](https://burdantes.github.io/cloud-peering-maps/azure-2026-10-ipv4.html) | Microsoft Azure | `monthly/20261012-5k/azure` | IPv4 | 39 | 4,665 | 3,414 | 216 |
 | [`gcp-2026-09-ipv4-ipv6.html`](https://burdantes.github.io/cloud-peering-maps/gcp-2026-09-ipv4-ipv6.html) | Google Cloud | `monthly/20260915/gcp` | IPv4 + IPv6 | 43 | 6,853 | 2,696 | 232 |
 | [`gcp-2026-08-ipv4.html`](https://burdantes.github.io/cloud-peering-maps/gcp-2026-08-ipv4.html) | Google Cloud | `gcp-global42-20260803t2030z` | IPv4 | 41 | 5,208 | 1,803 | 219 |
-| [`aws-2026-08-ipv4.html`](https://burdantes.github.io/cloud-peering-maps/aws-2026-08-ipv4.html) | AWS | `aws-20260806-trace-global28` | IPv4 | 27 | 3,434 | 3,126 | 119 |
+| [`aws-2026-08-ipv4.html`](https://burdantes.github.io/cloud-peering-maps/aws-2026-08-ipv4.html) | AWS | `aws-20260806-trace-global28` (re-mapped 2026-10-17) | IPv4 | 27 | 6,280 | 5,826 | 204 |
 | [`azure-2026-09-ipv4.html`](https://burdantes.github.io/cloud-peering-maps/azure-2026-09-ipv4.html) | Microsoft Azure | `monthly/20260915/azure-part1b` | IPv4 | 20 | 4,649 | 3,629 | 215 |
 | [`gcp-2026-03-ipv4.html`](https://burdantes.github.io/cloud-peering-maps/gcp-2026-03-ipv4.html) | Google Cloud | `gcp-march-20260308` | IPv4 | 42 (125 zones) | 5,879 | 3,351 | 178 |
 
@@ -22,6 +22,16 @@ are `peer-networks/<provider>-2026-10.json`, built from the same per-region peer
 files as the maps.
 
 ## Provenance
+
+- **AWS re-mapping (17 October 2026).** AWS routers mostly answer traceroute from
+  addresses with no BGP origin (240.0.0.0/4, 100.64.0.0/10, and public space AWS does
+  not announce), so a hand-off behind them was never counted. Both AWS maps were
+  re-mapped from the original traceroutes and datasets with scamper-analysis
+  `894009a` (PR #30): walking out from the instance, a hop with no BGP origin counts
+  as AWS's until the first hop in another network, unless an unanswered hop comes
+  first. Known caveat, fixed in the next campaign by attributing unannounced public
+  space to its RIR holder: a neighbor's own unannounced router directly after AWS's is
+  counted as AWS's (about 7.5% of neighbors in us-east-1, October).
 
 - **October 2026 campaigns.** All three clouds were measured in parallel on 12–13
   October 2026 from every eligible region, at **5,000 probes per second** per worker

@@ -139,7 +139,7 @@ const PROVIDERS = [
 ];
 const NOTES = {
   gcp: "Probed at 5,000 packets per second. Google rate-limits ICMP replies at that rate, so some neighbors are missed and a few may be misattributed; per-region counts are about 6% (IPv4) and 21% (IPv6) lower than the September 1,000 pps campaign. IPv4 uses Google's Standard tier, IPv6 the Premium tier.",
-  aws: "Probed at 5,000 packets per second. Neighbors reached across an IXP are about 60% fewer per region than in August 2026 while all other neighbors are unchanged; whether AWS changed how it routes or its edge routers stopped answering traceroute is not yet established.",
+  aws: "Probed at 5,000 packets per second. AWS routers mostly answer traceroute from unrouted addresses (240.0.0.0/4, 100.64.0.0/10, unannounced AWS space), so this table counts a hop with no BGP origin as AWS's until the first hop in another network (re-mapped 17 October 2026). Known caveat, fixed in the next campaign: a neighbor's own unannounced router directly after AWS's is counted as AWS's, which in one region checked affected about 7.5% of neighbors (e.g. Columbia University appears behind NYSERNet in two Canadian regions).",
   azure: "IPv4 only: the IPv6 probes in this campaign failed to leave the virtual machines in 38 of 39 regions, so no Azure IPv6 neighbors are listed. IPv4 requested Azure's Internet (hot-potato) routing preference in every region, but only 28 regions behaved that way (21 to 344 neighbors each, mostly transit near the region). Eleven regions in India, the Middle East, Korea, South Africa, Australia and Arizona (westus3) saw 2,700 to 3,900 neighbors each at IXPs worldwide, as Microsoft's backbone (cold potato) would; why is not yet established.",
 };
 const PAGE = 100;
